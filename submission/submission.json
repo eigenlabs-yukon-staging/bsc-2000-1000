@@ -1,85 +1,45 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Product of 10 explicit 200-bit field-cube components",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "For the explicit 10-component systematic field-cube product over binary modulus X^100+X^29+X^23+X^16+1, with the radius-14 systematic candidate decoder in proof.md for each component, the uniform-message average block error for 1000 information bits on 2000 independent BSC(1/10) uses is at most 1888305552786479/2000000000000000.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "1888305552786479",
+        "denominator": "2000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "construction.py",
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "The bsc-ops-v1 program for the same field-cube product and its same component decoder uses at most the integer W=448951539095729003290 operations on every received word, with W<=2^(34303/500).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "34303",
+        "denominator": "500"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "construction.py",
+        "verify.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "certificate",
+      "source": "verify.py",
+      "purpose": "Verify the field modulus, exact component occupancy and combined block-error bound, memory and integer exponent inequality, and sample window-arithmetic identities.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
+        "properties": {},
+        "required": [],
         "additionalProperties": false
       },
       "initial_inputs": [
-        {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
-        },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "seed": 1,
-          "random_words": 20
-        }
+        {}
       ]
     }
   ]
