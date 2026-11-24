@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Rigorous first-copy error bound and tighter 33-operation certificate",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "For f(u)=(u,u) and deterministic first-copy g(y)=y[0:1000], on BSC(1/10) with uniform 1000-bit U, eps(f,g)=1-(9/10)^1000 <= B, where B=1-floor(9^1000*10^100/10^1000)/10^100 is the exact reduced rational score declared here.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "9999999999999999999999999999999999999999999998252128748277348390340025380835339429470937512564811483",
+        "denominator": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       },
       "evidence": [
         "proof.md",
@@ -14,10 +14,10 @@
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "For the same explicit encoder f(u)=(u,u) and first-copy decoder g(y)=y[0:1000], the straight-line bsc-ops-v1 program in proof.md executes exactly W=33 operations on every 2000-bit received word, uses at most two registers and 48 addressed memory words, and satisfies W<=2^L with L=12611/2500.",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "12611",
+        "denominator": "2500"
       },
       "evidence": [
         "proof.md",
@@ -30,31 +30,21 @@
     {
       "id": "exact_check",
       "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "purpose": "Compute the exact first-copy block-error fraction, form the declared outward-rounded bound, check it is reduced and strictly improves the benchmark starter bound. Length and injectivity are established analytically in proof.md.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
-        "additionalProperties": false
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
       },
       "initial_inputs": [
-        {
-          "exponent": 46
-        }
+        {}
       ]
     },
     {
       "id": "ops_check",
       "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
+      "purpose": "Run the unrolled first-copy decoder on the byte-identical reference counter, verify output correctness, and exactly check 33^2500<=2^12611 and strict improvement over L=101/20. Sample runs illustrate the straight-line proof.",
       "input_schema": {
         "type": "object",
         "properties": {

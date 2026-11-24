@@ -1,39 +1,76 @@
-# Baseline: repetition code, read the first copy
+# Exact first-copy point
 
-This baseline is deliberately weak. It shows the submission format and an exact computational step; it is not a competitive code.
+## Complete code and decoder
 
-## Code
+Index bits from zero. Let f(u)[i]=u[i mod 1000] for 0<=i<2000.
+Let g(y)[i]=y[i] for 0<=i<1000. Both functions are deterministic and
+fully specified. The first 1000 coordinates make f injective, hence there
+are exactly 2^1000 codewords, each of length 2000. The decoder returns
+exactly 1000 bits and has no access to either the message or the noise.
 
-- Encoder: f(u) = (u_1, ..., u_1000, u_1, ..., u_1000). Each message bit is sent twice, so f maps {0,1}^1000 to {0,1}^2000 and is injective. The code therefore carries exactly 2^1000 messages in 2000 channel uses.
-- Decoder: g(y) = (y_1, ..., y_1000), the first copy. It is deterministic, outputs 1000 bits and does not depend on the noise.
+## Claim 0: exact block error
 
-## Error probability
+For every fixed u, the event g(f(u) XOR Z)=u is precisely the event that
+all of Z[0],...,Z[999] are zero. The last 1000 noise coordinates have
+no effect on the decoder. Independent BSC(1/10) noise therefore gives
+success probability (9/10)^1000 for every u, and averaging over uniform U
+preserves this value. Thus eps(f,g)=(10^1000-9^1000)/10^1000 exactly.
+To stay within the verifier's 256-digit rational format, claim 0 uses
+an exact rational outward rounding rather than that 1001-digit fraction.
+Set S=floor(9^1000*10^100/10^1000) and B=1-S/10^100, reduced as printed
+in submission.json. Since S/10^100 <= (9/10)^1000, the exact error is at
+most B. exact_check.py performs this integer division, reduces B with
+Fraction, prints its numerator and denominator, and checks both
+1-(9/10)^1000<=B and B<(10^46-1)/10^46. These integers match claim 0's
+score. No floating point, ensemble assertion or empirical error estimate
+enters the claim. The quotient definition determines B without ambiguity.
 
-Let y = f(u) + Z. Then g(y)_i = u_i + Z_i for i = 1, ..., 1000. So g(y) = u exactly when Z_1 = ... = Z_1000 = 0. The Z_i are independent Bernoulli(1/10), so for every message u
+## Claim 1: complete RAM program and worst-case count
 
-    Pr[g(f(u) + Z) = u] = (9/10)^1000.
+The machine and input/output layout are exactly bsc-ops-v1 in rules.md.
+The following is a macro describing a fully unrolled straight-line program:
 
-Averaging over a uniform U gives eps(f, g) = 1 - (9/10)^1000 exactly.
+```
+For each literal j=0,1,...,14, emit these two instructions:
+    r := load(j)
+    store(32+j, r)
+r := load(15)
+r := and(r, 1099511627775)  # literal 2^40-1
+store(47, r)
+HALT
+```
 
-## Bound
+The phrase 'for each literal' is code generation, not a runtime loop.
+All 33 instructions have fixed addresses and literal constants. No
+runtime indexing, branch, loop, call or return occurs. Moves, constants
+and halt are free by the rules. There are 16 loads, 16 stores and one
+64-bit and, so exactly W=33 operations on every received word. Only one
+64-bit data register is necessary; even allowing a second address
+register is well below 64. Input addresses 0..31 and output addresses
+32..47 are the only addresses; there are no tables or working-memory
+allocations. The 2^32-word memory limit is respected.
 
-Claim: eps(f, g) <= 1 - 10^(-46), that is, B = (10^46 - 1) / 10^46.
+Input words 0..14 hold y[0:960]. Input word 15 holds y[960:1024]. The
+mask keeps its low 40 bits, namely y[960:1000], and zeros the remaining
+24 output padding bits. Thus this exact program computes g on every
+received word, not merely on codewords or low-weight errors.
 
-The claim is equivalent to (9/10)^1000 >= 10^(-46), which is equivalent to the integer inequality 9^1000 * 10^46 >= 10^1000. The experiment `exact_check` (exact_check.py) evaluates both sides with Python's exact integers and prints the comparison. Its captured output is the evidence for this step. For orientation, log10((9/10)^1000) = 1000 * log10(0.9) ≈ -45.76, which is consistent with the exact check. This decimal value is not part of the proof.
+For L=12611/2500, W<=2^L is equivalent (both sides positive) to
+33^2500<=2^12611. ops_check.py verifies this exact integer comparison
+and checks 12611*20<101*2500. The latter proves our L is strictly below
+the starter's 101/20. The counter file opmodel.py is copied byte-for-byte
+from reference/opmodel.py with the published SHA-256. Its calls in
+ops_check.py denote primitive instructions of the RAM program; the host
+Python loop is the macro unroller, not additional RAM control flow, as
+in the supplied starter. Test cases illustrate instruction counts and
+correct outputs; the input-independent straight-line proof establishes
+the worst case. Neither error nor cost claims rely on simulation.
 
-Hence eps(f, g) = 1 - (9/10)^1000 <= 1 - 10^(-46) = B.
+## Provenance and scope
 
-## Decoding complexity (claim 1)
-
-The decoder g above, written as a program in the bsc-ops-v1 model of rules.md. The received word y is preloaded in words 0..31 (bit i of y is bit i mod 64 of word floor(i/64)); the output u goes to words 32..47 in the same layout, with bits 1000..1023 zero.
-
-    for j = 0, ..., 14:   r <- load(j);  store(32 + j, r)        (15 x 2 ops; unrolled, no branches)
-    r <- load(15)                                                  (1 op)
-    r <- and(r, 2^40 - 1)                                          (1 op; the constant is free)
-    store(47, r)                                                   (1 op)
-
-The loop over j is fully unrolled, so the program is straight-line: it has no branches and executes the same 33 primitives on every received word. Total: 30 + 1 + 1 + 1 = 33 ops for every y, so the worst case is W = 33.
-
-Correctness: words 0..14 hold y_1, ..., y_960 and are copied unchanged. Word 15 holds y_961, ..., y_1024 in bits 0..63; the mask keeps bits 0..39, which are y_961, ..., y_1000, and clears bits 40..63. So the output is exactly (y_1, ..., y_1000) = g(y), in the required layout.
-
-Score: the claim is W <= 2^L with L = 101/20, which is equivalent to 33^20 <= 2^101. The experiment `ops_check` (ops_check.py) checks this with exact integers (and that 33^20 > 2^100, so L cannot be 5). It also runs the program on the counter `opmodel.py`, a byte-identical copy of the organizer's reference/opmodel.py (its sha256 is printed), on 22 received words: all report 33 ops and the correct output. Those runs illustrate the count; the worst-case bound is the straight-line argument above.
+This entry deliberately keeps the official starter construction and its
+33-instruction implementation. The contribution is a rigorously outward-rounded error score
+and a tighter rational complexity certificate, not a new coding algorithm.
+Both exact rational scores strictly improve the official starter point. Local
+structural checking and advisory review are distinct from the configured
+review and human confirmation required for official acceptance.

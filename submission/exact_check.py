@@ -1,8 +1,10 @@
-import json
-import sys
-
-d = json.load(sys.stdin)["exponent"]
-lhs = 9 ** 1000 * 10 ** d
-rhs = 10 ** 1000
-print(json.dumps({"exponent": d, "nine_pow_1000_times_ten_pow_exponent_ge_ten_pow_1000": lhs >= rhs,
-                  "lhs_decimal_digits": len(str(lhs)), "rhs_decimal_digits": len(str(rhs))}))
+import json, math, sys
+from fractions import Fraction
+json.load(sys.stdin)
+exact_error=1-Fraction(9**1000,10**1000)
+scale=10**100
+success_floor=9**1000*scale//10**1000
+B=1-Fraction(success_floor,scale)
+assert exact_error<=B<Fraction(10**46-1,10**46)
+assert math.gcd(B.numerator,B.denominator)==1
+print(json.dumps({"length":2000,"message_bits":1000,"success_floor":str(success_floor),"B_numerator":str(B.numerator),"B_denominator":str(B.denominator),"exact_error_le_B":True,"fraction_is_reduced":True,"strictly_better_error_than_starter":True}))

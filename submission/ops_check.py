@@ -1,7 +1,7 @@
 """Run the starter decoder on the bsc-ops-v1 reference counter (opmodel.py, a
 byte-identical copy of the organizer's reference/opmodel.py) for several received
 words, and report the op count, whether the output equals the first copy, and
-the exact check W^20 <= 2^101 for the claimed bound 2^(101/20)."""
+the exact check W^2500 <= 2^12611 for the claimed bound 2^(12611/2500)."""
 import hashlib
 import json
 import random
@@ -38,6 +38,7 @@ print(json.dumps({
     "distinct_op_counts": sorted(set(counts)),
     "outputs_equal_first_copy": correct,
     "W": W,
-    "W_pow_20_le_2_pow_101": W ** 20 <= 2 ** 101,
-    "W_pow_20_le_2_pow_100": W ** 20 <= 2 ** 100,
+    "W_pow_2500_le_2_pow_12611": W ** 2500 <= 2 ** 12611,
+    "L_strictly_below_starter": 12611 * 20 < 101 * 2500,
+    "W_greater_than_32": W > 32,
 }))
