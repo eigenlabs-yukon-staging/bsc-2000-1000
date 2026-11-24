@@ -1,85 +1,45 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Eight split information charts in a quadratic tower",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "For the explicit quadratic field-tower code (a,b)->(a,b,ab,a^3+lambda*b^3) and the radius-103 split-chart decoder with its fixed fallback, average block error for a uniform 1000-bit message and 2000 independent BSC(1/10) uses is at most 109323247683769923/1000000000000000000.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "109323247683769923",
+        "denominator": "1000000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "construction.py",
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "The same bsc-ops-v1 decoder uses at most W=1046768610630845755577589297698401186667985325458294013088833650365968515225092606603199255707031637112345981855128199781821845563950470426379184984 primitives on every received word, with W<=2^(48839/100).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "48839",
+        "denominator": "100"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "construction.py",
+        "verify.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "certificate",
+      "source": "verify.py",
+      "purpose": "Verify the field, exact admitted volume and collision-sharp error bound, primitive count comparison, memory range and sample split-chart updates.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
-        "additionalProperties": false
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
       },
       "initial_inputs": [
-        {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
-        },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "seed": 1,
-          "random_words": 20
-        }
+        {}
       ]
     }
   ]
