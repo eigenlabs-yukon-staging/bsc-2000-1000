@@ -1,86 +1,23 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "A degree-1000 field-cube code with bounded systematic search",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
-      "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
-      },
-      "evidence": [
-        "proof.md",
-        "exact_check.py"
-      ]
+      "statement": "For the explicit systematic field code u -> (u,u^3) over binary modulus X^1000+X^53+X^45+X^34+1, decoded by minimum-distance search over messages within 130 flips of the first received half with smallest numerical message winning ties, the average block error on uniform 1000-bit messages in 2000 memoryless BSC(1/10) uses is at most 7197791244648179/125000000000000000.",
+      "score": {"numerator": "7197791244648179", "denominator": "125000000000000000"},
+      "evidence": ["proof.md", "construction.py", "verify.py"]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
-      "score": {
-        "numerator": "101",
-        "denominator": "20"
-      },
-      "evidence": [
-        "proof.md",
-        "ops_check.py",
-        "opmodel.py"
-      ]
+      "statement": "The bsc-ops-v1 program specified for the same field code and 130-flip decoder uses at most the integer W=33943*(sum of binom(1000,d) for d=0 through 130)+178 primitives on every received word, with W <= 2^(113597/200).",
+      "score": {"numerator": "113597", "denominator": "200"},
+      "evidence": ["proof.md", "construction.py", "verify.py"]
     }
   ],
-  "experiments": [
-    {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
-        },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "seed": 1,
-          "random_words": 20
-        }
-      ]
-    }
-  ]
+  "experiments": [{
+    "id": "certificate",
+    "source": "verify.py",
+    "purpose": "Verify irreducibility, evaluate the exact noise-conditioned hyperplane collision bound and binomial mass sum, verify memory and W^200 <= 2^113597, and illustrate the multiplication window identity on fixed samples.",
+    "input_schema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false},
+    "initial_inputs": [{}]
+  }]
 }
