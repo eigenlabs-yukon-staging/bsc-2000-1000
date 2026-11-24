@@ -1,84 +1,57 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "2 cyclic cube fields with depth-dependent Golay search",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "The explicit cyclic encoder over 2 degree-500 cube fields with Golay and Hamming parity and its radius-99, depth-dependent cost decoder for 1000 message bits on 2000 BSC(1/10) uses have average block error at most 55175262120037839/1000000000000000000.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "55175262120037839",
+        "denominator": "1000000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "construction.py",
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "The same bsc-ops-v1 decoder executes at most W=12655718231271140291244282917333766630684326333463496218684841600549665544012146891171150287146153678168897438011691538004360756464944995452 primitives on every received word, with W<=2^(57761/125).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "57761",
+        "denominator": "125"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "construction.py",
+        "verify.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "exact_certificate",
+      "source": "verify.py",
+      "purpose": "Check exact depth-specific admission and worst-case cost (part 0) and the exact full-code ML occupancy with proper-run losses (part 1).",
       "input_schema": {
         "type": "object",
         "properties": {
-          "exponent": {
+          "part": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 1000
+            "maximum": 1
           }
         },
         "required": [
-          "exponent"
+          "part"
         ],
         "additionalProperties": false
       },
       "initial_inputs": [
         {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
+          "part": 0
         },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
         {
-          "seed": 1,
-          "random_words": 20
+          "part": 1
         }
       ]
     }
