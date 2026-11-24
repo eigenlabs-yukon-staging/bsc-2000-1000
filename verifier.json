@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "id": "bsc-2000-1000",
+  "rules_path": "rules.md",
+  "review_standard": "bsc-2000-1000-review-v2",
+  "objectives": [
+    {
+      "name": "block_error_upper_bound",
+      "direction": "-",
+      "unit": "probability",
+      "semantics": "The exact rational B proved in eps(f,g) <= B, where eps is the average block error probability of the submission's explicit encoder f: {0,1}^1000 -> {0,1}^2000 and decoder g over a memoryless BSC with crossover 1/10, for a uniform message. Lower is better. Claim 0; claim 1 must concern the same f and g. Existence or ensemble bounds, simulation estimates and bit-error rates do not count.",
+      "score_source": {
+        "claim": 0
+      },
+      "score_minimum": {
+        "numerator": "525481183",
+        "denominator": "10000000000"
+      },
+      "score_maximum": {
+        "numerator": "1",
+        "denominator": "1"
+      }
+    },
+    {
+      "name": "decoding_ops_log2",
+      "direction": "-",
+      "unit": "log2(operations)",
+      "semantics": "The exact rational L in the proved statement: on every received word y in {0,1}^2000 (and every outcome of its random bits), the submission's decoder g, the same g as claim 0, halts after executing at most W <= 2^L primitives of the bsc-ops-v1 model in rules.md (64-bit word RAM, every listed primitive including load, store and branch costs 1, at most 2^32 words of memory including tables). Worst case, not average. Lower is better.",
+      "score_source": {
+        "claim": 1
+      },
+      "score_minimum": {
+        "numerator": "4",
+        "denominator": "1"
+      },
+      "score_maximum": {
+        "numerator": "4096",
+        "denominator": "1"
+      }
+    }
+  ],
+  "allow_unscored": false,
+  "policies": {
+    "scoring": {},
+    "validity": {}
+  },
+  "supported_policies": {
+    "scoring": [
+      {
+        "selector": {},
+        "instructions": "Use the configured score sources: claim 0 gives B and claim 1 gives L. Each score is the claimed value only if the proof establishes it for the specific explicit code and decoder; a weaker proved bound does not rescue a stronger claim. Both claims must name the same encoder f and decoder g."
+      }
+    ],
+    "validity": [
+      {
+        "selector": {},
+        "instructions": "Apply rules.md to the complete claim, proof, code files and experiment evidence. Confirm the code is explicit, has exactly 2^1000 messages and length 2000, and that the bound concerns average block error on BSC(1/10). Reject simulation, ensemble/existence arguments, assumed weight distributions and unrigorous floating point. Check that each experiment computes what the proof says from the submitted data, and that its captured output matches the claimed numbers. For claim 1: confirm the program whose operations are counted computes exactly the decoder g of claim 0 on every received word; that it is written in the bsc-ops-v1 model of rules.md with every primitive (including loads, stores, branches and loop tests) charged 1; that loop and recursion counts are bounded by proof for every received word (worst case, never an expectation or a sampled count); that tables are fully specified by the submission and memory stays within 2^32 words; that any counter run uses a byte-identical copy of reference/opmodel.py (sha256 in rules.md); and that W <= 2^L is checked exactly as W^q <= 2^p for L = p/q."
+      }
+    ]
+  },
+  "provider": {
+    "model": "gpt-6-astra",
+    "reasoning_effort": "high",
+    "max_completion_tokens": 32768,
+    "timeout_seconds": 1200,
+    "background": true,
+    "max_attempts": 1
+  },
+  "limits": {
+    "max_followups": 1,
+    "max_files": 64,
+    "max_file_bytes": 262144,
+    "max_submission_bytes": 1048576,
+    "max_initial_runs": 4,
+    "run_seconds": 120,
+    "initial_seconds": 480,
+    "followup_seconds": 120,
+    "total_seconds": 600,
+    "memory_mb": 1024,
+    "cpus": 2,
+    "total_output_bytes": 655360,
+    "max_prompt_bytes": 4194304,
+    "total_review_seconds": 2400
+  },
+  "checkers": [
+    {
+      "id": "bsc_exact",
+      "description": "Exact rational arithmetic for BSC(1/10), n=2000: tail(t)=Pr[Bin(2000,1/10)>=t] or pairwise(w)=Pr[Bin(w,1/10)>=ceil(w/2)] (ML pairwise error, ties counted as errors), compared with a rational bound B. A pass establishes only value<=B, never a property of the submitted code.",
+      "source": "checkers/bsc_exact.py",
+      "files": [
+        "checkers/bsc_exact.py"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 8,
+            "enum": [
+              "tail",
+              "pairwise"
+            ]
+          },
+          "parameter": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2001
+          },
+          "bound_numerator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "bound_denominator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "kind",
+          "parameter",
+          "bound_numerator",
+          "bound_denominator"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 8,
+            "enum": [
+              "tail",
+              "pairwise"
+            ]
+          },
+          "parameter": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2001
+          },
+          "value_numerator": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "value_denominator": {
+            "type": "string",
+            "maxLength": 16
+          },
+          "value_decimal_upper": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "passed",
+          "kind",
+          "parameter",
+          "value_numerator",
+          "value_denominator",
+          "value_decimal_upper",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "required_for_score": false
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "title": "Test case: checker pass with an unproved minimum distance",
+  "claims": [
+    {
+      "statement": "For the double-circulant code [I | A] with A defined from random.Random(7).getrandbits(1000) and bounded-distance decoding to radius 221, eps(f, g) <= 281/5000 on BSC(1/10) with a uniform message.",
+      "score": {
+        "numerator": "281",
+        "denominator": "5000"
+      },
+      "evidence": [
+        "proof.md"
+      ]
+    },
+    {
+      "statement": "For the same code and decoder, implemented as the exhaustive Gray-code search in proof.md, g executes at most W = 2^1008 + 16 <= 2^1009 operations of the bsc-ops-v1 model on every received word.",
+      "score": {
+        "numerator": "1009",
+        "denominator": "1"
+      },
+      "evidence": [
+        "proof.md"
+      ]
+    }
+  ],
+  "experiments": [],
+  "checks": [
+    {
+      "check": "bsc_exact",
+      "inputs": {
+        "kind": "tail",
+        "parameter": 222,
+        "bound_numerator": "281",
+        "bound_denominator": "5000"
+      }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "name": "bsc-2000-1000",
+  "tracks": [
+    {
+      "name": "main",
+      "description": "bsc-2000-1000",
+      "category": "math",
+      "mode": "pareto",
+      "promotionMode": "manual",
+      "direction": "-",
+      "objectives": [
+        {
+          "name": "block_error_upper_bound",
+          "direction": "-"
+        },
+        {
+          "name": "decoding_ops_log2",
+          "direction": "-"
+        }
+      ],
+      "paretoPolicies": {
+        "scoring": {},
+        "validity": {}
+      },
+      "editablePaths": [
+        "submission"
+      ],
+      "submissionAdmission": {
+        "version": 1,
+        "submissionReferencesEnabled": false
+      },
+      "setupCommand": [
+        "llm-verifier",
+        "intake",
+        "--root",
+        ".",
+        "--out",
+        ".yukon/work/intake.json"
+      ],
+      "benchmarkCommand": [
+        "llm-verifier",
+        "finalize",
+        "--intake",
+        ".yukon/work/intake.json",
+        "--initial",
+        ".yukon/work/initial.json",
+        "--initial-review",
+        ".yukon/work/review.json",
+        "--score",
+        ".yukon/score.json",
+        "--dossier",
+        ".yukon/dossier.json"
+      ],
+      "scorePath": ".yukon/score.json",
+      "maxSubmissionBytes": 1048576,
+      "runner": {
+        "provider": "github-actions",
+        "workflow": "benchmark.yml",
+        "scoreArtifactName": "benchmark-score",
+        "maxConcurrentWorkflows": 2
+      }
+    }
+  ]
+}

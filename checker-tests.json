@@ -1,0 +1,71 @@
+[
+  {
+    "id": "pairwise-3-exact",
+    "check": "bsc_exact",
+    "inputs": {
+      "kind": "pairwise",
+      "parameter": 3,
+      "bound_numerator": "7",
+      "bound_denominator": "250"
+    },
+    "expected": {
+      "passed": true,
+      "value_numerator": "28",
+      "value_denominator": "10^3"
+    }
+  },
+  {
+    "id": "pairwise-3-too-tight",
+    "check": "bsc_exact",
+    "inputs": {
+      "kind": "pairwise",
+      "parameter": 3,
+      "bound_numerator": "27",
+      "bound_denominator": "1000"
+    },
+    "expected": {
+      "passed": false
+    }
+  },
+  {
+    "id": "tail-222-above-1-over-20",
+    "check": "bsc_exact",
+    "inputs": {
+      "kind": "tail",
+      "parameter": 222,
+      "bound_numerator": "1",
+      "bound_denominator": "20"
+    },
+    "expected": {
+      "passed": false,
+      "value_decimal_upper": "0.056160877358706406131"
+    }
+  },
+  {
+    "id": "tail-0-is-one",
+    "check": "bsc_exact",
+    "inputs": {
+      "kind": "tail",
+      "parameter": 0,
+      "bound_numerator": "1",
+      "bound_denominator": "1"
+    },
+    "expected": {
+      "passed": true,
+      "value_denominator": "10^2000"
+    }
+  },
+  {
+    "id": "noncanonical-bound-rejected",
+    "check": "bsc_exact",
+    "inputs": {
+      "kind": "tail",
+      "parameter": 5,
+      "bound_numerator": "01",
+      "bound_denominator": "2"
+    },
+    "expected": {
+      "passed": false
+    }
+  }
+]

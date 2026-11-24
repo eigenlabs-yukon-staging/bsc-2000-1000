@@ -1,0 +1,41 @@
+{
+  "initial_results": [
+    {
+      "exponent": 46,
+      "nine_pow_1000_times_ten_pow_exponent_ge_ten_pow_1000": true,
+      "lhs_decimal_digits": 1001,
+      "rhs_decimal_digits": 1001
+    },
+    {
+      "opmodel_sha256": "9b440361c3fede634b8021705f6afd62e964c1d996045c91a16228acee296903",
+      "words_tested": 22,
+      "distinct_op_counts": [
+        33
+      ],
+      "outputs_equal_first_copy": true,
+      "W": 33,
+      "W_pow_20_le_2_pow_101": true,
+      "W_pow_20_le_2_pow_100": false
+    }
+  ],
+  "initial_decision": {
+    "kind": "judgment",
+    "judgment": {
+      "valid": true,
+      "scores": null,
+      "reason": "Claim 0: the code is explicit with 2^1000 messages and length 2000; eps = 1 - (9/10)^1000 exactly, and the exact integer check gives (9/10)^1000 >= 10^-46. Claim 1: the same decoder is a 33-op straight-line program in bsc-ops-v1, and 33^20 <= 2^101.",
+      "evidence_refs": [
+        "source:proof.md",
+        "source:exact_check.py",
+        "source:ops_check.py",
+        "source:opmodel.py",
+        "run:initial:0",
+        "run:initial:1"
+      ],
+      "review_standard": "bsc-2000-1000-review-v2"
+    },
+    "requests": []
+  },
+  "followup_results": [],
+  "final_decision": null
+}

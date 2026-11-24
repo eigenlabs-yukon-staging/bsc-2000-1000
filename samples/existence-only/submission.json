@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "title": "Test case: existence argument, no explicit code",
+  "claims": [
+    {
+      "statement": "There exists an encoder f: {0,1}^1000 -> {0,1}^2000 such that, with maximum-likelihood decoding g, eps(f, g) <= 585061/10000000 on BSC(1/10) with a uniform message.",
+      "score": {
+        "numerator": "585061",
+        "denominator": "10000000"
+      },
+      "evidence": [
+        "proof.md"
+      ]
+    },
+    {
+      "statement": "For the same code and maximum-likelihood decoder, implemented as the exhaustive search in proof.md, g executes at most W <= 2^1009 operations of the bsc-ops-v1 model on every received word.",
+      "score": {
+        "numerator": "1009",
+        "denominator": "1"
+      },
+      "evidence": [
+        "proof.md"
+      ]
+    }
+  ],
+  "experiments": []
+}

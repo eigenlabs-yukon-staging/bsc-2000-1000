@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "title": "Test case: loop control left out of the count",
+  "claims": [
+    {
+      "statement": "Let f(u) = (u, u) and g(y) = (y_1, ..., y_1000). On BSC(1/10) with a uniform message, eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "score": {
+        "numerator": "9999999999999999999999999999999999999999999999",
+        "denominator": "10000000000000000000000000000000000000000000000"
+      },
+      "evidence": [
+        "proof.md",
+        "exact_check.py"
+      ]
+    },
+    {
+      "statement": "For the same code and decoder, implemented as the loop in proof.md, g executes at most W = 33 <= 2^(101/20) operations of the bsc-ops-v1 model on every received word.",
+      "score": {
+        "numerator": "101",
+        "denominator": "20"
+      },
+      "evidence": [
+        "proof.md"
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "exact_check",
+      "source": "exact_check.py",
+      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "exponent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "exponent"
+        ],
+        "additionalProperties": false
+      },
+      "initial_inputs": [
+        {
+          "exponent": 46
+        }
+      ]
+    }
+  ]
+}
