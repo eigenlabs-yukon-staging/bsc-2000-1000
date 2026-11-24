@@ -1,39 +1,63 @@
-# Baseline: repetition code, read the first copy
+# Seven independently repeated message word planes
 
-This baseline is deliberately weak. It shows the submission format and an exact computational step; it is not a competitive code.
+Write a 1000-bit message as a low-bit-first integer. The
+first 1000 transmitted positions carry the message in order.
+Set positions 1000 through 1023 to zero. For each word
+j=0 through 6 of the message, copy its 64 bits to two further
+transmitted words at indices 16+2*j and 17+2*j. Set all
+remaining channel positions from 1920 through 1999 to zero.
+The first copy makes the encoder injective. Exactly 448
+message bits each have three disjoint transmitted positions.
+The other 552 message bits each have one position.
 
-## Code
+The decoder copies the singly represented bits from the
+first 1000 received positions. For each of the seven full
+groups of 64 triply represented bits, it decides each bit
+by majority. Three received words T,A,B provide the three
+copies in the same bit order. Compute the 64 majority
+decisions as
 
-- Encoder: f(u) = (u_1, ..., u_1000, u_1, ..., u_1000). Each message bit is sent twice, so f maps {0,1}^1000 to {0,1}^2000 and is injective. The code therefore carries exactly 2^1000 messages in 2000 channel uses.
-- Decoder: g(y) = (y_1, ..., y_1000), the first copy. It is deterministic, outputs 1000 bits and does not depend on the noise.
+    C = T AND A
+    D = T OR A
+    D = D AND B
+    T = C OR D
 
-## Error probability
+For each bit position, if T and A both set the bit then C
+sets it. If exactly one of T,A sets the bit, D and then
+the last OR set it exactly when B does. If T and A both
+clear the bit then both intermediate terms clear it.
+This proves the majority rule for every received word.
 
-Let y = f(u) + Z. Then g(y)_i = u_i + Z_i for i = 1, ..., 1000. So g(y) = u exactly when Z_1 = ... = Z_1000 = 0. The Z_i are independent Bernoulli(1/10), so for every message u
+The counted program is the literal expansion of schedule()
+in verify.py. The generator loops and decisions use literal
+position indices to select which instructions to emit. The
+emitted machine program uses one literal load for each of
+the first sixteen received words, two more loads and four
+logic operations for each of the first seven words, one
+AND with 2^40-1 for the last output word, and sixteen
+literal output stores. There are no runtime branches,
+loops, address calculations or tables. Padding bits in the
+last output word are always zero, irrespective of noise in
+positions 1000 through 1023. The five registers T,A,B,C,D
+are reused, all input addresses lie in 0 through 29, and
+all output addresses lie in 32 through 47.
+The worst-case count is exactly 16+7*6+1+16=75.
+The exponent 3115/500, equivalently 623/100, satisfies
+75^100<=2^623 by exact integer comparison.
 
-    Pr[g(f(u) + Z) = u] = (9/10)^1000.
+For a triply represented bit, success means zero or one
+of the three flips. Its probability is (9/10)^3 plus
+3*(1/10)*(9/10)^2, which equals 243/250. For a singly
+represented bit success means no flip and has probability
+9/10. All these events concern disjoint channel uses, so
+they are independent for each fixed message. The success
+probability is constant in that message, hence the uniform
+average error is exactly
 
-Averaging over a uniform U gives eps(f, g) = 1 - (9/10)^1000 exactly.
+    E = 1 - (243/250)^448 * (9/10)^552.
 
-## Bound
-
-Claim: eps(f, g) <= 1 - 10^(-46), that is, B = (10^46 - 1) / 10^46.
-
-The claim is equivalent to (9/10)^1000 >= 10^(-46), which is equivalent to the integer inequality 9^1000 * 10^46 >= 10^1000. The experiment `exact_check` (exact_check.py) evaluates both sides with Python's exact integers and prints the comparison. Its captured output is the evidence for this step. For orientation, log10((9/10)^1000) = 1000 * log10(0.9) ≈ -45.76, which is consistent with the exact check. This decimal value is not part of the proof.
-
-Hence eps(f, g) = 1 - (9/10)^1000 <= 1 - 10^(-46) = B.
-
-## Decoding complexity (claim 1)
-
-The decoder g above, written as a program in the bsc-ops-v1 model of rules.md. The received word y is preloaded in words 0..31 (bit i of y is bit i mod 64 of word floor(i/64)); the output u goes to words 32..47 in the same layout, with bits 1000..1023 zero.
-
-    for j = 0, ..., 14:   r <- load(j);  store(32 + j, r)        (15 x 2 ops; unrolled, no branches)
-    r <- load(15)                                                  (1 op)
-    r <- and(r, 2^40 - 1)                                          (1 op; the constant is free)
-    store(47, r)                                                   (1 op)
-
-The loop over j is fully unrolled, so the program is straight-line: it has no branches and executes the same 33 primitives on every received word. Total: 30 + 1 + 1 + 1 = 33 ops for every y, so the worst case is W = 33.
-
-Correctness: words 0..14 hold y_1, ..., y_960 and are copied unchanged. Word 15 holds y_961, ..., y_1024 in bits 0..63; the mask keeps bits 0..39, which are y_961, ..., y_1000, and clears bits 40..63. So the output is exactly (y_1, ..., y_1000) = g(y), in the required layout.
-
-Score: the claim is W <= 2^L with L = 101/20, which is equivalent to 33^20 <= 2^101. The experiment `ops_check` (ops_check.py) checks this with exact integers (and that 33^20 > 2^100, so L cannot be 5). It also runs the program on the counter `opmodel.py`, a byte-identical copy of the organizer's reference/opmodel.py (its sha256 is printed), on 22 received words: all report 33 ops and the correct output. Those runs illustrate the count; the worst-case bound is the straight-line argument above.
+The declared calculation derives this exact fraction,
+checks B=ceil(10^250*E)/10^250, checks
+the exponent comparison, and exercises the schedule using
+the reference word-RAM counter on sample inputs. The proof
+gives the operation count and decoding rule universally.

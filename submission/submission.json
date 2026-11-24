@@ -1,85 +1,43 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Seven majority planes in 75 word-RAM primitives",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "The stated encoder and fixed majority plane decoder in proof.md give uniform-message average block error at most the submitted rational B, the upward rounding of 1-(243/250)^448*(9/10)^552 to a multiple of 10^-250 for 1000 bits on 2000 independent BSC(1/10) uses.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "2499999999999999999999999999999588573836342232089451785373097223264430486795999458109922315945809339598196913258521147762270677242238243328583868432902023908854179634486407462706287338325378729746145280888980099213482562138967589996421022867734369513",
+        "denominator": "2500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "The same bsc-ops-v1 decoder uses exactly W=75 primitives for every received word, and W<=2^(623/100).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "623",
+        "denominator": "100"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "verify.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "certificate",
+      "source": "verify.py",
+      "purpose": "Compute the exact average error, cross-check the worst-case exponent, and exercise the counted fixed schedule.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
-        "additionalProperties": false
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
       },
       "initial_inputs": [
-        {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
-        },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "seed": 1,
-          "random_words": 20
-        }
+        {}
       ]
     }
   ]
