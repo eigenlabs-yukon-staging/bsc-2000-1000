@@ -1,84 +1,75 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Twenty-sided polynomial decoder with rank costs (0, 1, 2, 3, 4, 5) and budget 5",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "The explicit two-component 2000-use polynomial-tag decoder with rank costs (0, 1, 2, 3, 4, 5) and a per-group cost cap of 5 has uniform-message average block error at most 476481182634220819/500000000000000000 on BSC(1/10).",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "476481182634220819",
+        "denominator": "500000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "construction.py",
+        "verify.py",
+        "spectra0.json",
+        "spectra1.json",
+        "spectra2.json",
+        "spectra3.json",
+        "ranks.json",
+        "profiles.json"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "The same fixed bsc-ops-v1 decoder executes exactly W=74648449142 primitives on every input, with W<=2^(180597/5000).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "180597",
+        "denominator": "5000"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "construction.py",
+        "verify.py",
+        "spectra0.json",
+        "spectra1.json",
+        "spectra2.json",
+        "spectra3.json",
+        "profiles.json",
+        "ranks.json"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "tag_spectra",
+      "source": "verify.py",
+      "purpose": "Verify exact tag and leader spectra and the independent pair bounds by support. The final sector checks exact admitted volume, block error, memory and RAM cost.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "exponent": {
+          "sector": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 1000
+            "maximum": 3
           }
         },
         "required": [
-          "exponent"
+          "sector"
         ],
         "additionalProperties": false
       },
       "initial_inputs": [
         {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
+          "sector": 0
         },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
         {
-          "seed": 1,
-          "random_words": 20
+          "sector": 1
+        },
+        {
+          "sector": 2
+        },
+        {
+          "sector": 3
         }
       ]
     }
