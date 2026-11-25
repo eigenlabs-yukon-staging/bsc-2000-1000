@@ -1,39 +1,74 @@
-# Baseline: repetition code, read the first copy
+# Nineteen-operation decoding on the BSC
 
-This baseline is deliberately weak. It shows the submission format and an exact computational step; it is not a competitive code.
+All indices start at zero, with low bits first. Encode a 1000-bit
+message u by sending u followed by another identical copy of u.
+The first copy proves injectivity, so the encoder has exactly 2^1000
+codewords in 2000 channel uses.
 
-## Code
+The decoder is the following straight-line bsc-ops-v1 program.
+The instruction templates are expanded before execution. Each address
+and the zero operand in the second template is a program constant.
 
-- Encoder: f(u) = (u_1, ..., u_1000, u_1, ..., u_1000). Each message bit is sent twice, so f maps {0,1}^1000 to {0,1}^2000 and is injective. The code therefore carries exactly 2^1000 messages in 2000 channel uses.
-- Decoder: g(y) = (y_1, ..., y_1000), the first copy. It is deterministic, outputs 1000 bits and does not depend on the noise.
+1. For each literal i from 0 through 2, emit R = load(i), followed
+   by store(32+i, R).
+2. For each literal i from 3 through 15, emit store(32+i, 0).
+3. Halt.
 
-## Error probability
+There is one register, no preloaded table, and no memory access beyond
+address 47. The additions in the template addresses are performed at
+expansion time. There are no runtime branches, calls or loops. The
+program uses 3 loads and 16 stores on every input, totaling 19
+operations. The last output word is zero, including all pad bits.
+The exact exponent comparison with the manifest's L=p/q is
+19^q <= 2^p, checked by the declared experiment.
 
-Let y = f(u) + Z. Then g(y)_i = u_i + Z_i for i = 1, ..., 1000. So g(y) = u exactly when Z_1 = ... = Z_1000 = 0. The Z_i are independent Bernoulli(1/10), so for every message u
+## Average block error
 
-    Pr[g(f(u) + Z) = u] = (9/10)^1000.
+The first 192 decoded bits equal the first 192 bits of the received
+word, and the remaining 808 decoded bits are zero. The first 192 bits
+match the transmitted message exactly when their channel noise is zero.
+The other 808 bits match exactly when the corresponding message bits
+are all zero. These events are independent since the uniform message
+is independent of the channel noise. Thus the exact success probability
+is S = 9^192/(10^192 * 2^808). No constraint on any of the other received
+coordinates is needed.
 
-Averaging over a uniform U gives eps(f, g) = 1 - (9/10)^1000 exactly.
+For the reduced manifest fraction B=b/d, the exact comparison
+1-S <= b/d is equivalent to
+(d-b)*10^192*2^808 <= d*9^192 since all denominators are positive.
+The experiment computes this inequality for the declared b,d.
+The fraction is chosen by rounding toward larger error.
 
-## Bound
+## Optimality within the nineteen-operation budget
 
-Claim: eps(f, g) <= 1 - 10^(-46), that is, B = (10^46 - 1) / 10^46.
+This additional observation concerns any explicit encoder of the
+required dimensions. Every decoder writes the sixteen output words
+under the cost rule. With at most nineteen operations on every path,
+it can read at most three received words, adaptively or otherwise.
+All other memory initially contains only constants or zeros.
+Condition on a full random tape for any randomized decoder, independent
+of the message and channel. Computation, including any input-independent
+state and all addresses chosen, is then determined by previous replies
+to reads. Writes to an original input address cannot give information
+about the original word's unread bits. Reads of previously observed
+words also give no new information.
 
-The claim is equivalent to (9/10)^1000 >= 10^(-46), which is equivalent to the integer inequality 9^1000 * 10^46 >= 10^1000. The experiment `exact_check` (exact_check.py) evaluates both sides with Python's exact integers and prints the comparison. Its captured output is the evidence for this step. For orientation, log10((9/10)^1000) = 1000 * log10(0.9) ≈ -45.76, which is consistent with the exact check. This decimal value is not part of the proof.
+Reveal each newly observed genuine channel bit in order, within
+a word and across successive word reads, over a binary decision tree.
+A final input word can contain padding constants, which require no
+revelation. The deterministic decoder can be simulated from these
+revelations. For analysis, pad any terminating path by revealing
+previously unread channel coordinates selected in increasing order until
+exactly 192 bits have been revealed. The output is fixed on each
+padded leaf. There are at most 2^192 leaves. Along a specified path all
+its revealed coordinates are fixed and distinct. Conditional on any
+fixed message the probability of following that path is at most
+(9/10)^192, since the channel is independent across those coordinates
+and each prescribed reply has probability at most 9/10.
 
-Hence eps(f, g) = 1 - (9/10)^1000 <= 1 - 10^(-46) = B.
-
-## Decoding complexity (claim 1)
-
-The decoder g above, written as a program in the bsc-ops-v1 model of rules.md. The received word y is preloaded in words 0..31 (bit i of y is bit i mod 64 of word floor(i/64)); the output u goes to words 32..47 in the same layout, with bits 1000..1023 zero.
-
-    for j = 0, ..., 14:   r <- load(j);  store(32 + j, r)        (15 x 2 ops; unrolled, no branches)
-    r <- load(15)                                                  (1 op)
-    r <- and(r, 2^40 - 1)                                          (1 op; the constant is free)
-    store(47, r)                                                   (1 op)
-
-The loop over j is fully unrolled, so the program is straight-line: it has no branches and executes the same 33 primitives on every received word. Total: 30 + 1 + 1 + 1 = 33 ops for every y, so the worst case is W = 33.
-
-Correctness: words 0..14 hold y_1, ..., y_960 and are copied unchanged. Word 15 holds y_961, ..., y_1024 in bits 0..63; the mask keeps bits 0..39, which are y_961, ..., y_1000, and clears bits 40..63. So the output is exactly (y_1, ..., y_1000) = g(y), in the required layout.
-
-Score: the claim is W <= 2^L with L = 101/20, which is equivalent to 33^20 <= 2^101. The experiment `ops_check` (ops_check.py) checks this with exact integers (and that 33^20 > 2^100, so L cannot be 5). It also runs the program on the counter `opmodel.py`, a byte-identical copy of the organizer's reference/opmodel.py (its sha256 is printed), on 22 received words: all report 33 ops and the correct output. Those runs illustrate the count; the worst-case bound is the straight-line argument above.
+For a leaf to contribute to success, the message must equal the
+single output on that leaf. Uniformity gives probability 2^-1000 for
+that message. Summing the bound on its conditional leaf probability
+over leaves gives success at most 2^192 * 2^-1000 * (9/10)^192 = S.
+The upper bound is independent of any fixed random tape, so it holds
+after averaging over that tape. The displayed decoder attains S.
