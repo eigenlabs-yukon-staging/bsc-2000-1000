@@ -1,0 +1,191 @@
+from qr import N, ORBITS, PERMUTATIONS, ROW_CAP, orbit_labels, parity as qr_parity, permute_byte, row_words
+"""Fixed field, parity cells and decoder RAM tables."""
+M = 143
+ANCHOR_BITS = 142
+GROUPS = 7
+WORDS = 3
+HIGH_BITS = M - 64 * (WORDS - 1)
+MASK = (1 << M) - 1
+MASK64 = (1 << 64) - 1
+BYTES = (M + 7) // 8
+NIBBLES = (M + 3) // 4
+MOD_LOW = 1 | (1 << 1) | (1 << 5) | (1 << 9)
+MODULUS = (1 << M) | MOD_LOW
+RADIUS = 142
+PRECISION = 16
+BUDGETS = (2614, 2569, 2526, 2484, 2441, 2398, 2353, 2309, 2270, 2223, 2183, 2138, 2096, 2052, 2009, 1966, 1920, 1878, 1835, 1789, 1743, 1701, 1654, 1609, 1565, 1519, 1474, 1428, 1382, 1336, 1289, 1241, 1195, 1147, 1099, 1049, 1000, 949, 898, 848, 796, 748, 693, 637, 585, 531, 474, 408, 335, 266, 68, 68, 68, 68, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 68, 66, 66, 68, 68, 68, 66, 66, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66)
+LIMIT = 3350
+WIDTHS = (24,)*5 + (12,) + (4,)*2 + (1,)*3
+OFFSETS = tuple(sum(WIDTHS[:j]) for j in range(len(WIDTHS)))
+SYS_WIDTHS = (ANCHOR_BITS,) + (M,)*(GROUPS-1)
+PAR_WIDTHS = (M,ANCHOR_BITS) + (M,)*(GROUPS-2)
+TOTAL_CELLS = (GROUPS - 1) * len(WIDTHS)
+# A zero in this schedule denotes a width-one systematic-only slot.
+SEARCH_WIDTHS = WIDTHS[:-1] + (0,) + WIDTHS*(GROUPS-2)
+SQUARE_BYTES = tuple(
+    sum(((value >> bit) & 1) << (2*bit) for bit in range(8)).to_bytes(2,"little")
+    for value in range(256)
+)
+
+
+ARRAYS = {name:48+WORDS*i for i,name in enumerate(
+    tuple(f"{label}{j}" for label in ("Y","P","X","C","B") for j in range(GROUPS))
+    + ("SQ","AP"))}
+NEXT = 48 + WORDS*len(ARRAYS)
+LAST = NEXT+M+1
+SELECTED = LAST+M+1
+FRAMES = SELECTED+TOTAL_CELLS
+MULT = FRAMES+6*TOTAL_CELLS
+REDUCE_1 = MULT+16*WORDS
+REDUCE_4 = REDUCE_1+2
+SQUARE_BASE = REDUCE_4+16
+PARITY_BASE = {12:SQUARE_BASE+BYTES*256*WORDS}
+PARITY_BASE[4] = PARITY_BASE[12] + (1<<12)
+PARITY_BASE[1] = PARITY_BASE[4] + (1<<4)
+LIST_BASE = {12:PARITY_BASE[1]+(1<<1)}
+LIST_BASE[4] = LIST_BASE[12] + (1<<24)
+LIST_BASE[1] = LIST_BASE[4] + (1<<8)
+SYS_ONLY_BASE = LIST_BASE[1] + (1<<2)
+QR_PARITY_BASE = SYS_ONLY_BASE+2
+QR_ORBIT_BASE = QR_PARITY_BASE+N
+QR_PERM_BASE = QR_ORBIT_BASE+N
+QR_ROW_BASE = QR_PERM_BASE+PERMUTATIONS*6*256
+BUDGET_BASE = QR_ROW_BASE+ORBITS*ROW_CAP
+PROFILE_COUNTS = {24:14,12:5,4:3,1:2,0:1}
+PROFILE_BASE = {24:BUDGET_BASE+len(BUDGETS)}
+PROFILE_BASE[12] = PROFILE_BASE[24]+ORBITS
+PROFILE_BASE[4] = PROFILE_BASE[12]+4096
+PROFILE_BASE[1] = PROFILE_BASE[4]+16
+CAP_BASE = PROFILE_BASE[1]+2
+CAP_OFFSETS = tuple(CAP_BASE+(LIMIT+1)*sum(PROFILE_COUNTS[w]
+                    for w in SEARCH_WIDTHS[:i]) for i in range(TOTAL_CELLS+1))
+MEMORY_END = CAP_OFFSETS[-1]
+
+def carryless(a,b):
+    result=0
+    while b:
+        bit=b&-b
+        result ^= a<<(bit.bit_length()-1)
+        b ^= bit
+    return result
+
+
+def poly_remainder(a,b):
+    while a.bit_length() >= b.bit_length():
+        a ^= b << (a.bit_length()-b.bit_length())
+    return a
+
+
+def remainder(value):
+    while value>>M:
+        hi=value>>M
+        value=(value&MASK)^hi^(hi<<1)^(hi<<5)^(hi<<9)
+    return value
+
+
+def square(value):
+    octets=value.to_bytes((value.bit_length()+7)//8,"little")
+    return remainder(int.from_bytes(b"".join(SQUARE_BYTES[i] for i in octets),"little"))
+
+
+def cube(value):
+    return remainder(carryless(value,square(value)))
+
+
+def golay_parity(value):
+    generator = sum(1 << i for i in (0, 2, 4, 5, 6, 10, 11))
+    remainder = poly_remainder(value << 11,generator)
+    return remainder | (((value.bit_count() + remainder.bit_count()) % 2) << 11)
+
+
+def hamming_parity(value):
+    columns = (14,13,11,7)
+    result = 0
+    for i,column in enumerate(columns):
+        if value >> i & 1:
+            result ^= column
+    return result
+
+
+PARITY = {24:qr_parity,12:golay_parity,4:hamming_parity,1:int}
+
+
+def linear(value):
+    result = 0
+    for w,i in zip(WIDTHS,OFFSETS,strict=True):
+        result |= PARITY[w]((value>>i)&((1<<w)-1)) << i
+    return result
+
+
+def encode(message):
+    sys_fields=[]
+    offset=0
+    for width in SYS_WIDTHS:
+        sys_fields.append((message>>offset)&((1<<width)-1))
+        offset+=width
+    val=message
+    for i,width in enumerate(PAR_WIDTHS):
+        parity=linear(sys_fields[i])^cube(sys_fields[i-1])
+        val|=(parity&((1<<width)-1))<<offset
+        offset+=width
+    return val
+
+
+def cost(normalizer, weight):
+    return ((normalizer**PRECISION-1)//weight**PRECISION).bit_length()
+
+
+def square_entry(index,key):
+    return square(key<<(8*index))
+
+
+def candidate_row(width,syndrome):
+    parity = PARITY[width]
+    choices = sorted((e.bit_count()+(parity(e)^syndrome).bit_count(),e)
+                     for e in range(1<<width))
+    weights = [9**(2*width-d) for d in range(2*width+1)]
+    normalizer = sum(weights[d] for d,_ in choices)
+    costs = [cost(normalizer,weight) for weight in weights]
+    return tuple(e|(d<<12)|(costs[d]<<17) for d,e in choices)
+
+
+def table_word(address):
+    if REDUCE_1<=address<REDUCE_4:
+        return carryless(address-REDUCE_1,MOD_LOW)
+    if REDUCE_4<=address<SQUARE_BASE:
+        return carryless(address-REDUCE_4,MOD_LOW)
+    if SQUARE_BASE<=address<PARITY_BASE[12]:
+        row,word=divmod(address-SQUARE_BASE,WORDS)
+        index,key=divmod(row,256)
+        return (square_entry(index,key)>>(64*word))&MASK64
+    for width in (12,4,1):
+        offset = address-PARITY_BASE[width]
+        if 0<=offset<1<<width:
+            return PARITY[width](offset)
+        offset = address-LIST_BASE[width]
+        if 0<=offset<1<<(2*width):
+            syndrome,rank=divmod(offset,1<<width)
+            return candidate_row(width,syndrome)[rank]
+    if SYS_ONLY_BASE<=address<QR_PARITY_BASE:
+        e=address-SYS_ONLY_BASE
+        return e|(e<<12)|(cost(10,9**(1-e))<<17)
+    if QR_PARITY_BASE<=address<QR_ORBIT_BASE:
+        return qr_parity(address-QR_PARITY_BASE)
+    if QR_ORBIT_BASE<=address<QR_PERM_BASE:
+        return orbit_labels()[0][address-QR_ORBIT_BASE]
+    if QR_PERM_BASE<=address<QR_ROW_BASE:
+        row,value=divmod(address-QR_PERM_BASE,256)
+        perm,byte=divmod(row,6)
+        return permute_byte(perm,byte,value)
+    if QR_ROW_BASE<=address<BUDGET_BASE:
+        orbit,ordinal=divmod(address-QR_ROW_BASE,ROW_CAP)
+        return row_words(orbit,PRECISION)[ordinal]
+    if BUDGET_BASE<=address<PROFILE_BASE[24]:
+        return BUDGETS[address-BUDGET_BASE]
+    if PROFILE_BASE[24]<=address<MEMORY_END:
+        from dynamics import adaptive_word
+        return adaptive_word(address)
+    if address >= MEMORY_END:
+        from accelerator import extra_table_word
+        return extra_table_word(address)
+    raise ValueError("not a fixed table address")
