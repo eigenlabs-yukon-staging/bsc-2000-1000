@@ -1,43 +1,111 @@
-"""Run the starter decoder on the bsc-ops-v1 reference counter (opmodel.py, a
-byte-identical copy of the organizer's reference/opmodel.py) for several received
-words, and report the op count, whether the output equals the first copy, and
-the exact check W^20 <= 2^101 for the claimed bound 2^(101/20)."""
-import hashlib
+"""Validate the primitive list, table addressing, and packing with the reference counter."""
+import itertools
 import json
+from collections import Counter
+from fractions import Fraction
+from pathlib import Path
 import random
 import sys
-from pathlib import Path
 
-# In the verifier sandbox the submission's files are at /snapshot/files/; locally, beside this file.
-HERE = next(d for d in (Path("/snapshot/files"), Path(__file__).resolve().parent) if (d / "opmodel.py").is_file())
+HERE = Path("/snapshot/files") if Path("/snapshot/files/construction.py").is_file() else Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from opmodel import Machine, INPUT_BASE, OUTPUT_BASE  # noqa: E402
+from construction import (
+    LAYOUT, block_columns, cap, encode, parity, schedule, syndrome_columns,
+    table_addresses,
+)
+from opmodel import Machine
 
 
-def decode(m):
-    # Straight-line program: no branches, so every received word costs the same.
-    for j in range(15):                      # words 0..14 hold y_0..y_959 = first copy
-        m.store(OUTPUT_BASE + j, m.load(INPUT_BASE + j))
-    w = m.load(INPUT_BASE + 15)              # y_960..y_1023: y_960..y_999 are first copy
-    m.store(OUTPUT_BASE + 15, m.and_(w, (1 << 40) - 1))
+def low_weight_leaders(k):
+    cols = syndrome_columns(k)
+    leaders = {}
+    for w in range(3):
+        for positions in itertools.combinations(range(2 * k), w):
+            syndrome = 0
+            for j in positions:
+                syndrome ^= cols[j]
+            leaders.setdefault(syndrome, sum(1 << j for j in positions))
+    return leaders
 
 
-cfg = json.load(sys.stdin)
-rng = random.Random(cfg["seed"])
-words = [[0] * 2000, [1] * 2000] + [[rng.getrandbits(1) for _ in range(2000)] for _ in range(cfg["random_words"])]
-counts, correct = [], True
-for y in words:
-    m = Machine(y)
-    decode(m)
-    counts.append(m.ops)
-    correct &= m.output_bits() == y[:1000]
-W = max(counts)
-print(json.dumps({
-    "opmodel_sha256": hashlib.sha256((HERE / "opmodel.py").read_bytes()).hexdigest(),
-    "words_tested": len(words),
-    "distinct_op_counts": sorted(set(counts)),
-    "outputs_equal_first_copy": correct,
-    "W": W,
-    "W_pow_20_le_2_pow_101": W ** 20 <= 2 ** 101,
-    "W_pow_20_le_2_pow_100": W ** 20 <= 2 ** 100,
-}))
+def sampled_preload(received, leaders):
+    """Compute exact preloaded values for the addresses used in this sample."""
+    offset = 0
+    addresses, _ = table_addresses()
+    tables = {}
+    result = 0
+    for k in LAYOUT:
+        p_base, c_base = addresses[k]
+        a = (received >> offset) & cap(k)
+        v = (received >> (1000 + offset)) & cap(k)
+        p_a = parity(a, block_columns(k))
+        c = leaders[k][p_a ^ v] & cap(k)
+        tables[p_base + a] = c_base | p_a
+        tables[c_base + (p_a ^ v)] = c
+        result |= (a ^ c) << offset
+        offset += k
+    return tables, result
+
+
+class CheckedMachine(Machine):
+    def load(self, address):
+        if address >= 48 and address not in self.mem:
+            raise ValueError("missing preloaded table entry for a sample")
+        return super().load(address)
+
+
+def replay(machine, program):
+    registers = {}
+    for op, dst, *args in program:
+        values = [registers[a] if isinstance(a, str) else a for a in args]
+        if op == "move":
+            registers[dst] = values[0]
+        elif op == "store":
+            machine.store(*values)
+        else:
+            registers[dst] = getattr(machine, op)(*values)
+    return machine.output_bits()
+
+
+def bits(value, width):
+    return [(value >> i) & 1 for i in range(width)]
+
+
+def main():
+    json.load(sys.stdin)
+    score = json.loads((HERE / "submission.json").read_text())["claims"][1]["score"]
+    exponent = Fraction(int(score["numerator"]), int(score["denominator"]))
+    program = list(schedule())
+    counts = Counter(op for op, *_ in program if op != "move")
+    cost = sum(counts.values())
+    assert cost == 468
+    assert cost ** exponent.denominator <= 2 ** exponent.numerator
+    _, end = table_addresses()
+    assert end <= 1 << 32
+    rng = random.Random(419)
+    leaders = {k: low_weight_leaders(k) for k in (30, 10)}
+    cases = 0
+    for i in range(20):
+        message = (0 if i == 0 else (1 << 1000) - 1 if i == 1 else rng.getrandbits(1000))
+        received = encode(message)
+        if i >= 2:
+            offset = 0
+            for k in LAYOUT:
+                for j in rng.sample(range(2 * k), i % 3):
+                    position=offset+j if j<k else 1000+offset+j-k
+                    received ^= 1 << position
+                offset += k
+        tables, expected = sampled_preload(received, leaders)
+        machine = CheckedMachine(bits(received, 2000), tables=tables)
+        actual = replay(machine, program)
+        assert machine.ops == cost and actual == bits(expected, 1000)
+        if i < 2:
+            assert actual == bits(message, 1000)
+        cases += 1
+    print(json.dumps({"op_counts": counts, "ops": cost, "exponent": str(exponent),
+                      "integer_power_comparison": True, "memory_words": end,
+                      "sample_words": cases}))
+
+
+if __name__ == "__main__":
+    main()
