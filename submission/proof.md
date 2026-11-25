@@ -1,39 +1,61 @@
-# Baseline: repetition code, read the first copy
+# Thirty-two operations using the padded input word
 
-This baseline is deliberately weak. It shows the submission format and an exact computational step; it is not a competitive code.
+All bit positions are zero based, with low bits first. For a message
+u of length 1000, transmit in the indicated positions:
 
-## Code
+| Channel bit positions | Contents |
+| --- | --- |
+| 0 through 959 | Message bits 0 through 959 |
+| 960 through 983 | Message bits 976 through 999 |
+| 984 through 1983 | Constant zeros |
+| 1984 through 1999 | Message bits 960 through 975 |
 
-- Encoder: f(u) = (u_1, ..., u_1000, u_1, ..., u_1000). Each message bit is sent twice, so f maps {0,1}^1000 to {0,1}^2000 and is injective. The code therefore carries exactly 2^1000 messages in 2000 channel uses.
-- Decoder: g(y) = (y_1, ..., y_1000), the first copy. It is deterministic, outputs 1000 bits and does not depend on the noise.
+The four rows partition the 2000 channel uses. Every message bit
+occurs exactly once, so the encoder is an explicit injection of
+all 2^1000 messages. Positions 2000 through 2047 in the RAM input
+are padding according to rules.md, outside the channel. These 48
+padding bits are zero for every possible 2000-bit received word.
 
-## Error probability
+## Decoder program and worst-case cost
 
-Let y = f(u) + Z. Then g(y)_i = u_i + Z_i for i = 1, ..., 1000. So g(y) = u exactly when Z_1 = ... = Z_1000 = 0. The Z_i are independent Bernoulli(1/10), so for every message u
+Expand the following templates into a straight-line program.
+All addresses are constants in the expanded program.
 
-    Pr[g(f(u) + Z) = u] = (9/10)^1000.
+1. For each literal i from 0 through 14, in order, emit
+   R = load(i), then store(32+i, R).
+2. Emit R = load(31), then store(47, R).
+3. Halt.
 
-Averaging over a uniform U gives eps(f, g) = 1 - (9/10)^1000 exactly.
+There is one live 64-bit register. The program accesses only words
+0 through 14, word 31, and output words 32 through 47. It uses no
+preloaded table, address arithmetic, branches, jumps or calls.
+It executes sixteen loads and sixteen stores on every input, so
+W=32 and W<=2^5 holds with equality. This is the full worst-case
+count, including all the output stores.
 
-## Bound
+Output bits 0 through 959 are the first 960 received bits. The lower
+sixteen bits of output word 47 are the received bits at channel
+positions 1984 through 1999. The high 48 bits of output word 47 are
+zero since the source word has exactly those 48 padding bits zero.
+In particular message bits 976 through 999 always decode to zero,
+and the required output padding at positions 1000 through 1023
+is valid even for a received word of all ones.
 
-Claim: eps(f, g) <= 1 - 10^(-46), that is, B = (10^46 - 1) / 10^46.
+## Exact block-error bound
 
-The claim is equivalent to (9/10)^1000 >= 10^(-46), which is equivalent to the integer inequality 9^1000 * 10^46 >= 10^1000. The experiment `exact_check` (exact_check.py) evaluates both sides with Python's exact integers and prints the comparison. Its captured output is the evidence for this step. For orientation, log10((9/10)^1000) = 1000 * log10(0.9) ≈ -45.76, which is consistent with the exact check. This decimal value is not part of the proof.
+The decoded message is correct if and only if the 24 constant-output
+message bits of the actual input message are zero and none of the
+976 channel positions copied by the decoder has flipped.
+The first event has probability 2^-24 for a uniformly distributed
+message. It is independent of the other event, which has probability
+(9/10)^976 by channel independence. Hence the average block error is
 
-Hence eps(f, g) = 1 - (9/10)^1000 <= 1 - 10^(-46) = B.
+    1 - (9/10)^976 / 2^24.
 
-## Decoding complexity (claim 1)
+For b/d equal to the fraction in the manifest, the desired upper bound
+on block error follows from the exact integer comparison
 
-The decoder g above, written as a program in the bsc-ops-v1 model of rules.md. The received word y is preloaded in words 0..31 (bit i of y is bit i mod 64 of word floor(i/64)); the output u goes to words 32..47 in the same layout, with bits 1000..1023 zero.
+    (d-b) * 10^976 * 2^24 <= d * 9^976.
 
-    for j = 0, ..., 14:   r <- load(j);  store(32 + j, r)        (15 x 2 ops; unrolled, no branches)
-    r <- load(15)                                                  (1 op)
-    r <- and(r, 2^40 - 1)                                          (1 op; the constant is free)
-    store(47, r)                                                   (1 op)
-
-The loop over j is fully unrolled, so the program is straight-line: it has no branches and executes the same 33 primitives on every received word. Total: 30 + 1 + 1 + 1 = 33 ops for every y, so the worst case is W = 33.
-
-Correctness: words 0..14 hold y_1, ..., y_960 and are copied unchanged. Word 15 holds y_961, ..., y_1024 in bits 0..63; the mask keeps bits 0..39, which are y_961, ..., y_1000, and clears bits 40..63. So the output is exactly (y_1, ..., y_1000) = g(y), in the required layout.
-
-Score: the claim is W <= 2^L with L = 101/20, which is equivalent to 33^20 <= 2^101. The experiment `ops_check` (ops_check.py) checks this with exact integers (and that 33^20 > 2^100, so L cannot be 5). It also runs the program on the counter `opmodel.py`, a byte-identical copy of the organizer's reference/opmodel.py (its sha256 is printed), on 22 received words: all report 33 ops and the correct output. Those runs illustrate the count; the worst-case bound is the straight-line argument above.
+The declared experiment computes this comparison directly. The manifest
+fraction is rounded upward to meet the decimal-digit limit on scores.

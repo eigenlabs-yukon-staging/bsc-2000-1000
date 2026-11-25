@@ -1,84 +1,73 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "Thirty-two-operation decoding using the padded input word",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "For the 1000-message-bit encoder and padded-word decoder specified in proof.md, on the memoryless BSC(1/10) with uniform messages the average block error is at most the exact rational B below.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "4999999999999999999999999999999999999999999999999999346960695165732302877667505727182895186780316587818866687848248481872090804212086606803069651615615337642752377637564281585668130230329052623936451054950511268213823797486666172194107126403556130041",
+        "denominator": "5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "For the same 1000-message-bit encoder and padded-word decoder specified in proof.md, the decoder executes exactly W=32 operations on every 2000-bit received word in bsc-ops-v1, with W <= 2^5.",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "5",
+        "denominator": "1"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
-        "opmodel.py"
+        "verify.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "exact",
+      "source": "verify.py",
+      "purpose": "Verify the submitted average block error bound and 32^q <= 2^p using exact integer arithmetic.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "exponent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "exponent"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
-        {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
+          "B": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "minItems": 2,
+            "maxItems": 2
           },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
+          "L": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "minItems": 2,
+            "maxItems": 2
           }
         },
         "required": [
-          "seed",
-          "random_words"
+          "B",
+          "L"
         ],
         "additionalProperties": false
       },
       "initial_inputs": [
         {
-          "seed": 1,
-          "random_words": 20
+          "B": [
+            "4999999999999999999999999999999999999999999999999999346960695165732302877667505727182895186780316587818866687848248481872090804212086606803069651615615337642752377637564281585668130230329052623936451054950511268213823797486666172194107126403556130041",
+            "5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+          ],
+          "L": [
+            "5",
+            "1"
+          ]
         }
       ]
     }
