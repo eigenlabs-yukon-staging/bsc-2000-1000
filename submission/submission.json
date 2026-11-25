@@ -1,84 +1,65 @@
 {
   "version": 1,
-  "title": "Baseline: repetition code decoded from the first copy (33 ops)",
+  "title": "One Hamming group and a retuned shortened tail in 235 operations",
   "claims": [
     {
-      "statement": "Let f: {0,1}^1000 -> {0,1}^2000 be f(u) = (u, u) (each message bit sent twice) and let g(y) = (y_1, ..., y_1000). On a memoryless BSC with crossover probability 1/10 and a uniform message, the average block error probability satisfies eps(f, g) = 1 - (9/10)^1000 <= (10^46 - 1)/10^46.",
+      "statement": "For the fixed length-2000 dimension-1000 code in proof.md consisting of 64 Hamming lanes, twenty-two systematic length-64 words with the stated parity order, and the marked shortened tail, the stated shared-table decoder has average block error on the memoryless BSC(1/10) with uniform messages at most the exact rational B below.",
       "score": {
-        "numerator": "9999999999999999999999999999999999999999999999",
-        "denominator": "10000000000000000000000000000000000000000000000"
+        "numerator": "999999989388390295840363698723",
+        "denominator": "1000000000000000000000000000000"
       },
       "evidence": [
         "proof.md",
-        "exact_check.py"
+        "construction.py",
+        "verify.py"
       ]
     },
     {
-      "statement": "For the same code and decoder (f(u) = (u, u), g(y) = (y_1, ..., y_1000)), implemented as the 33-instruction straight-line program in proof.md, g uses at most W = 33 <= 2^(101/20) operations in the bsc-ops-v1 model on every received word y in {0,1}^2000.",
+      "statement": "For the same code and shared-table decoder in proof.md, the bsc-ops-v1 program executes exactly W=235 operations on every received word, with W <= 2^(196913/25000).",
       "score": {
-        "numerator": "101",
-        "denominator": "20"
+        "numerator": "196913",
+        "denominator": "25000"
       },
       "evidence": [
         "proof.md",
-        "ops_check.py",
+        "construction.py",
+        "verify.py",
+        "ops_samples.py",
         "opmodel.py"
       ]
     }
   ],
   "experiments": [
     {
-      "id": "exact_check",
-      "source": "exact_check.py",
-      "purpose": "Check 9^1000 * 10^46 >= 10^1000 with exact integers, which is equivalent to (9/10)^1000 >= 10^-46.",
+      "id": "sector",
+      "source": "verify.py",
+      "purpose": "Verify the exact minimum-weight syndrome histograms and shared-bank exclusions in all four wide sectors. Sector zero also checks the shortened histogram and absent keys, Hamming probabilities, exact score inequalities, and fixed schedule with exact sample traces.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "exponent": {
+          "sector": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 1000
+            "maximum": 3
           }
         },
         "required": [
-          "exponent"
+          "sector"
         ],
         "additionalProperties": false
       },
       "initial_inputs": [
         {
-          "exponent": 46
-        }
-      ]
-    },
-    {
-      "id": "ops_check",
-      "source": "ops_check.py",
-      "purpose": "Run the decoder program on the bsc-ops-v1 reference counter (byte-identical copy of reference/opmodel.py) on the all-zero, all-one and seeded random received words; report the op counts, that the output equals the first copy, and the exact check 33^20 <= 2^101.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "seed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000000
-          },
-          "random_words": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 200
-          }
+          "sector": 0
         },
-        "required": [
-          "seed",
-          "random_words"
-        ],
-        "additionalProperties": false
-      },
-      "initial_inputs": [
         {
-          "seed": 1,
-          "random_words": 20
+          "sector": 1
+        },
+        {
+          "sector": 2
+        },
+        {
+          "sector": 3
         }
       ]
     }
