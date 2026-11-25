@@ -1,39 +1,123 @@
-# Baseline: repetition code, read the first copy
+# Thirty-seven-operation decoder with a protected tail
 
-This baseline is deliberately weak. It shows the submission format and an exact computational step; it is not a competitive code.
+All positions are zero based and all words are little-endian. Use a binary
+matrix H with 32 columns represented by bytes, in this order:
 
-## Code
+- The integers 1 through 15, in increasing order.
+- The integers 16, 32, ..., 240, in increasing order.
+- The two integers 17 and 34.
 
-- Encoder: f(u) = (u_1, ..., u_1000, u_1, ..., u_1000). Each message bit is sent twice, so f maps {0,1}^1000 to {0,1}^2000 and is injective. The code therefore carries exactly 2^1000 messages in 2000 channel uses.
-- Decoder: g(y) = (y_1, ..., y_1000), the first copy. It is deterministic, outputs 1000 bits and does not depend on the noise.
+A coordinate with a unit column 2^j is called a parity coordinate.
+There are eight such coordinates. The remaining 24 coordinates are the data
+coordinates, in increasing order. For a 32-bit word v, H(v) is the XOR of the
+columns in its support. The parity columns are a basis. For each 24-bit
+data word d, there is a unique word v with those data bits and
+H(v)=248. Encode d as this word v. This defines an affine 32-bit code
+with 2^24 words.
 
-## Error probability
+## Overall encoder
 
-Let y = f(u) + Z. Then g(y)_i = u_i + Z_i for i = 1, ..., 1000. So g(y) = u exactly when Z_1 = ... = Z_1000 = 0. The Z_i are independent Bernoulli(1/10), so for every message u
+For a 1000-bit message u, make a 2000-bit transmitted vector as follows.
 
-    Pr[g(f(u) + Z) = u] = (9/10)^1000.
+- Put message bits 0 through 959 in channel positions 0 through 959.
+- Put the affine encoding of message bits 976 through 999 in channel
+  positions 992 through 1023.
+- Put message bits 960 through 975 in channel positions 1984 through 1999.
+- Put zero in every other channel position.
 
-Averaging over a uniform U gives eps(f, g) = 1 - (9/10)^1000 exactly.
+These groups of payload bits partition the message, and each is directly
+recoverable from the corresponding uncorrupted channel positions.
+The resulting encoder is injective, has exactly 2^1000 codewords, and
+uses exactly 2000 channel bits.
 
-## Bound
+## Table and decoder program
 
-Claim: eps(f, g) <= 1 - 10^(-46), that is, B = (10^46 - 1) / 10^46.
+For every s in 0 through 255, let e(s) be the least integer among the
+minimum Hamming weight 32-bit words e with H(e)=s. Every s occurs,
+because H has rank eight. Given a 32-bit received word v, let
+D(v) extract the 24 data bits from v XOR e(H(v) XOR 248).
+The corrected word has H value 248, so D(v) is a definite payload
+and ties are completely fixed. As the channel flip probability is
+1/10, minimum Hamming distance selects a maximum likelihood codeword.
 
-The claim is equivalent to (9/10)^1000 >= 10^(-46), which is equivalent to the integer inequality 9^1000 * 10^46 >= 10^1000. The experiment `exact_check` (exact_check.py) evaluates both sides with Python's exact integers and prints the comparison. Its captured output is the evidence for this step. For orientation, log10((9/10)^1000) = 1000 * log10(0.9) ≈ -45.76, which is consistent with the exact check. This decimal value is not part of the proof.
+The fixed read-only table at addresses 48 through 2^32-1 inclusive
+has the word D(a) shifted left by 40 at address a. This occupies
+2^32-48 words, disjoint from input and output. Entries are defined
+by the formula even if they have value zero.
 
-Hence eps(f, g) = 1 - (9/10)^1000 <= 1 - 10^(-46) = B.
+For each literal i from 0 through 14, in order, emit
 
-## Decoding complexity (claim 1)
+    R = load(i)
+    store(32+i, R)
 
-The decoder g above, written as a program in the bsc-ops-v1 model of rules.md. The received word y is preloaded in words 0..31 (bit i of y is bit i mod 64 of word floor(i/64)); the output u goes to words 32..47 in the same layout, with bits 1000..1023 zero.
+with both addresses as constants. Then emit these instructions.
 
-    for j = 0, ..., 14:   r <- load(j);  store(32 + j, r)        (15 x 2 ops; unrolled, no branches)
-    r <- load(15)                                                  (1 op)
-    r <- and(r, 2^40 - 1)                                          (1 op; the constant is free)
-    store(47, r)                                                   (1 op)
+    R = load(15)
+    R = shr(R, 32)
+    V = load(R)
+    V = shr(V, 24)
+    T = load(31)
+    V = or(V, T)
+    store(47, V)
 
-The loop over j is fully unrolled, so the program is straight-line: it has no branches and executes the same 33 primitives on every received word. Total: 30 + 1 + 1 + 1 = 33 ops for every y, so the worst case is W = 33.
+Halt. After the first shift R is a 32-bit integer, so even when it is
+below 48, load(R) is an in-range memory access. Its value can be any
+word without invalidating output padding. The next shift clips that
+word to 40 bits. The 48 padding bits of input word 31 are zero for every
+received word, so the OR also fits in 40 bits. If R>=48, the upper
+24 bits of that output field are precisely D(R) and its lower sixteen
+bits are precisely T. For R<48 the program still defines a decoder
+with valid output padding, and the error analysis gives those inputs
+no success credit.
 
-Correctness: words 0..14 hold y_1, ..., y_960 and are copied unchanged. Word 15 holds y_961, ..., y_1024 in bits 0..63; the mask keeps bits 0..39, which are y_961, ..., y_1000, and clears bits 40..63. So the output is exactly (y_1, ..., y_1000) = g(y), in the required layout.
+This program uses at most three 64-bit registers and no scratch
+memory. There are no runtime loops, branches, calls or implicit address
+computations. Fifteen pairs followed by seven operations cost 37
+operations on every received word. The exact exponent test for the
+manifest L=p/q is 37^q <= 2^p.
 
-Score: the claim is W <= 2^L with L = 101/20, which is equivalent to 33^20 <= 2^101. The experiment `ops_check` (ops_check.py) checks this with exact integers (and that 33^20 > 2^100, so L cannot be 5). It also runs the program on the counter `opmodel.py`, a byte-identical copy of the organizer's reference/opmodel.py (its sha256 is printed), on 22 received words: all report 33 ops and the correct output. Those runs illustrate the count; the worst-case bound is the straight-line argument above.
+## Exact success certificate
+
+A syndrome consists of two nibbles. Each nonzero pure nibble is a
+column, so any syndrome is reachable by choosing at most two distinct
+coordinates, one for each nonzero nibble. There is one syndrome of
+minimum distance zero, exactly 32 of minimum distance one because the
+columns are distinct and nonzero, and the remaining 223 have minimum
+distance two. For a uniform random data word and the 32-coordinate
+BSC, the affine decoder D succeeds with probability
+
+    (9^32 + 32*9^31 + 223*9^30) / 10^32.
+
+Indeed affine syndrome H(v) XOR 248 is the syndrome of the noise.
+On each of the 256 syndromes the decoder is correct precisely when
+the noise equals its selected leader. This yields one success
+contribution per syndrome, regardless of the transmitted data word.
+
+The physical table cannot supply D on the 48 received values below
+48. Those values have support in the first six bit positions. Their
+syndromes H(v) are in 0 through 7 because those first six columns
+are 1 through 6. Thus H(v) XOR 248 has high nibble 15 and low nibble
+in 8 through 15. No column has this pair of nibbles, and the syndrome
+is nonzero, so its least weight is two. For each such received v,
+the joint probability that v is received and the transmitted data
+is D(v) equals 2^-24 * 9^30/10^32. There is exactly one encoded word
+for D(v), and it differs from v by the chosen weight-two leader.
+Subtracting these 48 disjoint success events gives a lower bound on
+what the actual table program succeeds on in the affine group.
+
+The other 976 payload coordinates match exactly if their respective
+channel positions have no flips. That event has probability
+(9/10)^976 and is independent of the affine group's data and
+noise. Even on an exceptional affine address, no credit is needed
+for success. The whole program therefore succeeds with probability
+at least
+
+    S = [2^24*(9^32 + 32*9^31 + 223*9^30) - 48*9^30]
+        * 9^976 / (2^24 * 10^1008).
+
+For the reduced manifest fraction b/d, the claimed error upper bound
+is 1-S <= b/d. The declared experiment reconstructs H, the exact
+minimum-weight histogram through weight two, and all 48 exceptional
+syndrome weights. It substitutes these counts into the displayed
+success bound, checks the error inequality by cross multiplication,
+and checks the exact complexity power inequality.
